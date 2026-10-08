@@ -188,7 +188,7 @@ nav.tabs button[aria-selected="true"]{color:var(--accent);border-top-color:var(-
   <div id="v-crews" class="wrap" hidden>
     <section class="card">
       <div class="step">דיווח בוקר · <span id="cDate"></span></div>
-      <p class="msg">הצוותים מאתמול כבר כאן. תעדכן מי באתר היום, ולכל צוות כמה הוא ביצע <b>אתמול</b>.</p>
+      <p class="msg">הצוותים מהדיווח הקודם כבר כאן. לכל צוות: כמה ביצע ביום העבודה הקודם, ומי באתר היום, איפה ומה עושה.</p>
     </section>
     <div class="list" id="crewList"></div>
     <button class="btn ghost" id="addCrew">+ הוסף צוות</button>
@@ -392,29 +392,54 @@ async function decide(id, decision, card){
 
 /* ---------- crews ---------- */
 const UNITS = ["מ\"ר","מ\"ק","טון","יח'","מטר","שעות"];
-let CREWS = [];
+let CREWS = [], ZONES = [], TASKS = [];
+const unitFor = (task) => (TASKS.find(t => t.name === task) || {}).unit || null;
+function pickRow(label, options, value, onPick){
+  const wrap = el("div", "full"); wrap.append(el("div", "meta", label));
+  const box = el("div", "chips");
+  const extra = el("input"); extra.type = "text"; extra.placeholder = "אחר — לכתוב"; extra.hidden = true;
+  const known = options.includes(value);
+  for (const name of [...options, "אחר"]) {
+    const b = el("button", "chip", name); b.type = "button";
+    const on = name === "אחר" ? (!!value && !known) : name === value;
+    b.setAttribute("aria-pressed", String(on));
+    b.onclick = () => {
+      for (const o of box.children) o.setAttribute("aria-pressed","false"); b.setAttribute("aria-pressed","true");
+      extra.hidden = name !== "אחר"; if (name !== "אחר") onPick(name); else { extra.focus(); onPick(extra.value.trim() || null); }
+    };
+    box.append(b);
+  }
+  if (value && !known) { extra.hidden = false; extra.value = value; }
+  extra.oninput = () => onPick(extra.value.trim() || null);
+  wrap.append(box, extra);
+  return wrap;
+}
+function numInput(value, onChange, decimal){
+  const i = el("input"); i.type = "number"; i.min = "0"; i.step = decimal ? "any" : "1"; i.inputMode = decimal ? "decimal" : "numeric";
+  i.value = value ?? ""; i.oninput = () => onChange(i.value === "" ? null : Number(i.value)); return i;
+}
 function crewRow(c, idx){
   const box = el("div", "crew");
-  const n = el("input"); n.type = "number"; n.min = "0"; n.inputMode = "numeric"; n.value = c.n ?? ""; n.setAttribute("aria-label","מספר אנשים");
-  n.oninput = () => c.n = n.value === "" ? null : Number(n.value);
-  const nl = el("label", null, "אנשים"); nl.append(n);
-  const names = el("div", "row2");
-  const o = el("input"); o.type = "text"; o.value = c.origin || ""; o.placeholder = "סרילנקה / תאילנד / קבלן"; o.oninput = () => c.origin = o.value.trim();
-  const ol = el("label", null, "מי"); ol.append(o);
-  const z = el("input"); z.type = "text"; z.value = c.zone || ""; z.placeholder = "קומה 2 / מרתף"; z.oninput = () => c.zone = z.value.trim();
-  const zl = el("label", null, "איפה"); zl.append(z);
-  names.append(ol, zl);
-  const t = el("input"); t.type = "text"; t.value = c.task || ""; t.placeholder = "טיח / פירוק טפסנות / ברזל"; t.oninput = () => c.task = t.value.trim();
-  const tl = el("label", "full", "מה עושים היום"); tl.append(t);
-  const q = el("div", "qty full");
-  const qi = el("input"); qi.type = "number"; qi.min = "0"; qi.step = "any"; qi.inputMode = "decimal"; qi.value = c.done_yesterday ?? ""; qi.placeholder = "כמות";
-  qi.oninput = () => c.done_yesterday = qi.value === "" ? null : Number(qi.value);
-  const us = el("select"); for (const u of UNITS) { const op = el("option", null, u); op.value = u; us.append(op); } us.value = c.unit || "מ\"ר"; us.onchange = () => c.unit = us.value;
-  if (!c.unit) c.unit = us.value;
-  const ql = el("label", null, "כמה ביצעו אתמול"); ql.append(qi); const ul = el("label", null, "יחידה"); ul.append(us);
-  q.append(ql, ul);
+  // yesterday: only when this crew existed in the previous report
+  if (c.y_task || c.y_zone) {
+    const y = el("div", "full card"); y.style.background = "var(--accent-soft)"; y.style.padding = "10px";
+    y.append(el("div", "step", (c.y_date ? "ב-" + new Date(c.y_date + "T12:00:00").toLocaleDateString("he-IL", { weekday: "long" }) + ": " : "ביום הקודם: ") + [c.y_n ? c.y_n + " אנשים" : null, c.y_task, c.y_zone].filter(Boolean).join(" · ")));
+    const yq = el("div", "qty");
+    const ql = el("label", null, "כמה ביצעו באותו יום"); ql.append(numInput(c.done_yesterday, v => c.done_yesterday = v, true));
+    const us = el("select"); for (const u of UNITS) { const op = el("option", null, u); op.value = u; us.append(op); }
+    us.value = c.y_unit || unitFor(c.y_task) || "מ\"ר"; c.y_unit = us.value; us.onchange = () => c.y_unit = us.value;
+    const ul = el("label", null, "יחידה"); ul.append(us);
+    yq.append(ql, ul); y.append(yq); box.append(y);
+  }
+  box.append(el("div", "full step", "היום"));
+  const nl = el("label", null, "אנשים"); nl.append(numInput(c.n, v => c.n = v, false));
+  const o = el("input"); o.type = "text"; o.value = c.origin || ""; o.placeholder = "סרילנקה / תאילנד / שם קבלן"; o.oninput = () => c.origin = o.value.trim();
+  const ol = el("label", null, "מי (צוות / קבלן)"); ol.append(o);
+  box.append(nl, ol);
+  box.append(pickRow("איפה", ZONES, c.zone, v => c.zone = v));
+  box.append(pickRow("מה עושים", TASKS.map(t => t.name), c.task, v => { c.task = v; c.unit = unitFor(v) || c.unit; }));
   const rm = el("button", "link rm full", "הסר צוות"); rm.type = "button"; rm.onclick = () => { CREWS.splice(idx, 1); renderCrews(); };
-  box.append(nl, names, tl, q, rm);
+  box.append(rm);
   return box;
 }
 function renderCrews(){ const l = $("crewList"); l.textContent = ""; CREWS.forEach((c, i) => l.append(crewRow(c, i))); }
@@ -424,13 +449,14 @@ async function loadCrews(){
   try {
     const reps = await rpc("recent_crew_reports", { p_key: KEY, p_days: 14 });
     const today = reps.find(r => r.report_date === todayIL());
-    const base = today || reps[0];
-    CREWS = base ? base.crews.map(c => ({ ...c, done_yesterday: today ? c.done_yesterday : null })) : [];
+    if (today) CREWS = today.crews.map(c => ({ ...c }));
+    else if (reps[0]) CREWS = reps[0].crews.map(c => ({ n: c.n, origin: c.origin, zone: c.zone, task: c.task, unit: c.unit,
+      y_n: c.n, y_task: c.task, y_zone: c.zone, y_unit: unitFor(c.task) || c.unit, y_date: reps[0].report_date, done_yesterday: null }));
   } catch {}
-  if (!CREWS.length) CREWS = [{ n: null, origin: "", task: "", zone: "", unit: "מ\"ר", done_yesterday: null }];
+  if (!CREWS.length) CREWS = [{ n: null, origin: "", task: null, zone: null, unit: null, done_yesterday: null }];
   renderCrews();
 }
-$("addCrew").onclick = () => { CREWS.push({ n: null, origin: "", task: "", zone: "", unit: "מ\"ר", done_yesterday: null }); renderCrews(); };
+$("addCrew").onclick = () => { CREWS.push({ n: null, origin: "", task: null, zone: null, unit: null, done_yesterday: null }); renderCrews(); };
 $("cSend").onclick = async () => {
   const crews = CREWS.filter(c => (c.n ?? 0) > 0 || c.task);
   if (!crews.length) { say($("cStatus"), "אין צוותים לשלוח.", true); return; }
@@ -449,12 +475,14 @@ async function loadOutput(){
   for (const r of reps) {
     const prev = byDate[prevDay(r.report_date)];
     for (const c of r.crews) {
-      if (c.done_yesterday == null || c.unit === "שעות") continue;
-      // headcount that did yesterday's work: same task+zone in yesterday's report, else today's count
-      const p = prev && prev.crews.find(x => (x.task || "") === (c.task || "") && (x.zone || "") === (c.zone || ""));
-      const n = (p && p.n) || c.n;
+      const unit = c.y_unit || c.unit;
+      if (c.done_yesterday == null || unit === "שעות") continue;
+      // who did yesterday's work: the explicit yesterday fields, else the matching crew in yesterday's report, else today's count
+      const p = !c.y_task && prev && prev.crews.find(x => (x.task || "") === (c.task || "") && (x.zone || "") === (c.zone || ""));
+      const n = c.y_n || (p && p.n) || c.n;
       if (!n) continue;
-      rows.push({ day: prev ? prev.report_date : prevDay(r.report_date), origin: c.origin, task: c.task, zone: c.zone, n, qty: c.done_yesterday, unit: c.unit, per: c.done_yesterday / n });
+      rows.push({ day: c.y_date || (prev ? prev.report_date : prevDay(r.report_date)), origin: c.origin,
+                  task: c.y_task || c.task, zone: c.y_zone || c.zone, n, qty: c.done_yesterday, unit, per: c.done_yesterday / n });
     }
   }
   const avg = {};
@@ -504,7 +532,7 @@ $("saveName").onclick = () => { const v = $("myname").value.trim(); if (!v) retu
 $("changeName").onclick = () => { $("myname").value = me(); $("setup").hidden = false; };
 async function start(){
   $("whoBar").hidden = false; $("whoName").textContent = me();
-  try { const r = await rpc("site_info", { p_key: KEY }); if (r && r[0]) { $("siteName").textContent = r[0].name; SUPPLIERS = r[0].suppliers || []; } } catch {}
+  try { const r = await rpc("site_info", { p_key: KEY }); if (r && r[0]) { $("siteName").textContent = r[0].name; SUPPLIERS = r[0].suppliers || []; ZONES = r[0].zones || []; TASKS = r[0].tasks || []; } } catch {}
   try { APPROVER = await rpc("is_approver", { p_key: KEY }); } catch { APPROVER = false; }
   D.sup = chipGroup($("dChips"), $("dOther"), () => {}, false);
   O.sup = chipGroup($("oChips"), $("oOther"), oRefresh, true);
