@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>בינת הבנייה · פלטפורמה</title>
+<link rel="icon" href="../icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: sidebar of views on the right (RTL), one working table per view; KPI strip on top. Built for a desk screen, collapses to one column on a phone. */
+:root{
+  --ground:#EEF0EE; --panel:#FFFFFF; --ink:#1C2422; --muted:#5E6966; --line:#D5DAD7; --head:#F6F7F6;
+  --accent:#0F5C63; --accent-ink:#FFFFFF; --accent-soft:#DCEBEC;
+  --ok:#2E7D4F; --ok-bg:#E3F2E8; --warn:#9A6400; --warn-bg:#FBF0D9; --bad:#B3261E; --bad-bg:#FBE4E2; --idle:#6B7472; --idle-bg:#ECEEED;
+  --display:"Secular One","Assistant",system-ui,sans-serif;
+  --body:"Assistant",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --ground:#101614; --panel:#182020; --ink:#E7ECEA; --muted:#9AA7A3; --line:#2C3633; --head:#1D2725;
+  --accent:#6FC2C9; --accent-ink:#0C1B1D; --accent-soft:#16363A;
+  --ok:#7BD39E; --ok-bg:#163324; --warn:#F0C26A; --warn-bg:#3A2D12; --bad:#FF948B; --bad-bg:#3D1A17; --idle:#A3ADAA; --idle-bg:#252D2B;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --ground:#101614; --panel:#182020; --ink:#E7ECEA; --muted:#9AA7A3; --line:#2C3633; --head:#1D2725;
+  --accent:#6FC2C9; --accent-ink:#0C1B1D; --accent-soft:#16363A;
+  --ok:#7BD39E; --ok-bg:#163324; --warn:#F0C26A; --warn-bg:#3A2D12; --bad:#FF948B; --bad-bg:#3D1A17; --idle:#A3ADAA; --idle-bg:#252D2B;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;direction:rtl}
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}
+aside{background:var(--panel);border-inline-start:1px solid var(--line);padding:20px 14px;display:grid;align-content:start;gap:4px;position:sticky;top:0;height:100vh}
+.brand{font-family:var(--display);font-size:22px;margin:0 6px 2px}
+.site{color:var(--muted);font-size:13px;margin:0 6px 16px}
+aside button{appearance:none;border:0;background:none;font:inherit;font-weight:600;text-align:right;padding:10px 12px;border-radius:8px;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+aside button[aria-current="true"]{background:var(--accent-soft);color:var(--accent)}
+aside button:focus-visible{outline:2px solid var(--accent)}
+.badge{font-family:var(--mono);font-size:12px;background:var(--warn-bg);color:var(--warn);border-radius:999px;padding:0 8px}
+main{padding:22px 28px 60px;display:grid;gap:20px;align-content:start;min-width:0}
+h1{font-family:var(--display);font-weight:400;font-size:26px;margin:0}
+.sub{color:var(--muted);margin:2px 0 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:2px}
+.kpi b{font-family:var(--mono);font-size:26px;font-variant-numeric:tabular-nums;font-weight:500}
+.kpi span{color:var(--muted);font-size:13px}
+.kpi.alert b{color:var(--bad)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.panel h2{font-family:var(--display);font-weight:400;font-size:18px;margin:0;padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.panel h2 small{font-family:var(--body);font-size:13px;color:var(--muted)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{text-align:right;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--head);color:var(--muted);font-weight:600;font-size:12.5px;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td .muted{color:var(--muted);font-size:13px}
+.pill{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
+.pill.ok{color:var(--ok);background:var(--ok-bg)} .pill.warn{color:var(--warn);background:var(--warn-bg)} .pill.bad{color:var(--bad);background:var(--bad-bg)} .pill.idle{color:var(--idle);background:var(--idle-bg)}
+.lines{margin:0;padding:0;list-style:none;display:grid;gap:1px;font-size:13.5px}
+.btn{appearance:none;border:0;border-radius:8px;font:inherit;font-weight:700;padding:7px 14px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink)} .btn.ghost{background:var(--accent-soft);color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.acts{display:flex;gap:6px}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+.note{color:var(--muted);font-size:13px;padding:10px 16px;border-top:1px solid var(--line);margin:0}
+.gate{max-width:440px;margin:15vh auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;display:grid;gap:10px}
+.up{color:var(--ok);font-weight:700} .down{color:var(--bad);font-weight:700}
+@media (max-width:860px){.shell{grid-template-columns:1fr} aside{position:static;height:auto;grid-auto-flow:column;overflow-x:auto} .brand,.site{display:none} main{padding:16px}}
+</style>
+</head>
+<body>
+<div class="gate" id="gate" hidden>
+  <h1>בינת הבנייה</h1>
+  <p class="sub">הפלטפורמה נפתחת מהקישור המאשר בלבד. פתח אותה מהקישור ששמור אצלך.</p>
+</div>
+
+<div class="shell" id="shell" hidden>
+  <aside aria-label="תצוגות">
+    <div class="brand">בינת הבנייה</div>
+    <div class="site" id="siteName"></div>
+    <button data-v="overview" aria-current="true">סקירה</button>
+    <button data-v="orders">הזמנות <span class="badge" id="bPending" hidden></span></button>
+    <button data-v="deliveries">משלוחים <span class="badge" id="bGaps" hidden></span></button>
+    <button data-v="suppliers">ספקים</button>
+    <button data-v="output">הספק צוותים</button>
+    <button data-v="presence">באתר</button>
+  </aside>
+  <main>
+    <div><h1 id="vTitle">סקירה</h1><p class="sub" id="vSub"></p></div>
+    <section class="kpis" id="kpis"></section>
+    <div id="view"></div>
+  </main>
+</div>
+
+<script>
+const SB_URL = "https://mfzglrkmxyepzgzvyyuc.supabase.co";
+const SB_KEY = "sb_publishable_czhlgvL-hn3f-9efjUySHg_2UxdUdug";
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+const hk = new URLSearchParams(location.hash.slice(1)).get("k");
+if (hk) { store.set("binat.pk", hk); history.replaceState(null, "", location.pathname); }
+const KEY = hk || store.get("binat.pk");
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+async function rpc(fn, body){
+  const r = await fetch(SB_URL + "/rest/v1/rpc/" + fn, { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(fn + " " + r.status); return r.json();
+}
+const parseDay = (s) => { if (!s) return null; const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s); return m ? new Date(+m[3], +m[2]-1, +m[1]) : new Date(String(s).slice(0,10) + "T12:00:00"); };
+const dd = (s) => { const d = parseDay(s); return d && !isNaN(d) ? d.toLocaleDateString("he-IL", { day:"2-digit", month:"2-digit", year:"2-digit" }) : "—"; };
+const SRC = { app: "אפליקציה", orders_group: "קבוצת וואטסאפ", outlook: "מייל", sergei_chat: "וואטסאפ סרגיי", phone: "טלפון" };
+const MATCH = { matched: ["תואם","ok"], complete: ["תואם","ok"], partial: ["חלקי","warn"], short: ["חסר","bad"], over: ["עודף","warn"], damaged: ["פגום","bad"], gap: ["פער","bad"], no_order: ["אין הזמנה להשוואה","idle"], unreadable: ["לא נקרא","warn"], null: ["ממתין להשוואה","idle"] };
+const ORD = { pending: ["ממתין לאישור","warn"], approved: ["אושר","ok"], rejected: ["נדחה","bad"], open: ["פתוח","warn"], partial: ["הגיע חלקית","warn"], closed: ["סגור","ok"], fulfilled: ["הגיע במלואו","ok"] };
+const pill = (map, k) => { const [t, c] = map[k] || map.null || [k || "—", "idle"]; return el("span", "pill " + c, t); };
+const isGap = (d) => ["short","damaged","gap","over","unreadable"].includes(d.match_status) || (d.gap && Array.isArray(d.gap.gaps) && d.gap.gaps.length);
+
+let L = { orders: [], deliveries: [] }, APP_ORDERS = [], CREWS = [], PRES = [];
+
+function table(head, rows){
+  const wrap = el("div", "scroll"); const t = el("table"); const th = el("thead"); const tr = el("tr");
+  for (const h of head) tr.append(el("th", null, h)); th.append(tr); t.append(th);
+  const tb = el("tbody"); for (const r of rows) tb.append(r); t.append(tb); wrap.append(t); return wrap;
+}
+function td(content, cls){ const c = el("td", cls); if (content instanceof Node) c.append(content); else c.textContent = content ?? "—"; return c; }
+function linesList(items){ const ul = el("ul", "lines"); for (const it of (items || []).slice(0, 8)) ul.append(el("li", null, [it.product, it.qty != null ? it.qty + (it.unit ? " " + it.unit : "") : null].filter(Boolean).join(" · "))); return ul; }
+function panel(title, sub, body, note){ const p = el("section", "panel"); const h = el("h2", null, title); if (sub) h.append(el("small", null, sub)); p.append(h, body); if (note) p.append(el("p", "note", note)); return p; }
+
+/* ---------- views ---------- */
+function vOverview(){
+  const box = el("div"); box.style.display = "grid"; box.style.gap = "20px";
+  const pend = APP_ORDERS.filter(o => o.status === "pending");
+  if (pend.length) box.append(panel("ממתינות לאישור", pend.length + " הזמנות", ordersAppTable(pend)));
+  const gaps = L.deliveries.filter(isGap);
+  box.append(panel("פערים במשלוחים", gaps.length ? gaps.length + " לבירור" : "אין פערים פתוחים", gaps.length ? deliveriesTable(gaps) : el("div", "empty", "כל המשלוחים שנקלטו תואמים, או שאין להם הזמנה להשוואה.")));
+  const last = PRES[0];
+  if (last) box.append(panel("באתר · " + dd(last.work_date), "הצלבת דיווח הצוותים מול המצלמות", presenceTable(last)));
+  return box;
+}
+function ordersAppTable(list){
+  return table(["תאריך","ממי","ספק","מה","נדרש עד","סטטוס",""], list.map(o => {
+    const tr = el("tr"); tr.append(td(dd(o.created_at), "num"), td(o.requested_by), td(o.supplier), td(el("div", null, o.request_text || (o.photo_count ? o.photo_count + " תמונות" : "—"))), td(o.needed_by ? dd(o.needed_by) : "—", "num"), td(pill(ORD, o.status)));
+    const a = el("td");
+    if (o.status === "pending") {
+      const w = el("div", "acts"); const ok = el("button", "btn primary", "אשר"); const no = el("button", "btn ghost", "דחה");
+      ok.onclick = () => decide(o.id, "approved", w); no.onclick = () => decide(o.id, "rejected", w); w.append(ok, no); a.append(w);
+    } else if (o.decided_by) a.append(el("span", "muted", o.decided_by));
+    tr.append(a); return tr;
+  }));
+}
+function vOrders(){
+  const box = el("div"); box.style.display = "grid"; box.style.gap = "20px";
+  box.append(panel("הזמנות מהאפליקציה", APP_ORDERS.length + " אחרונות", APP_ORDERS.length ? ordersAppTable(APP_ORDERS) : el("div", "empty", "עוד אין הזמנות מהאפליקציה.")));
+  const rows = L.orders.map(o => { const tr = el("tr"); const del = L.deliveries.filter(d => d.order_id === o.order_id);
+    tr.append(td(dd(o.order_date), "num"), td(o.supplier), td(SRC[o.source] || o.source), td(linesList(o.items)), td(o.approved_by), td(pill(ORD, o.status)), td(del.length ? del.length + " משלוחים" : "עוד לא הגיע")); return tr; });
+  box.append(panel("כל ההזמנות שבהשוואה", "מכל הערוצים", rows.length ? table(["תאריך","ספק","מקור","שורות","אישר","מצב","משלוחים"], rows) : el("div", "empty", "עוד אין הזמנות שנקלטו להשוואה.")));
+  return box;
+}
+function deliveriesTable(list){
+  return table(["תאריך","ספק","תעודה","מקור","מה הגיע","השוואה","פירוט"], list.map(d => {
+    const tr = el("tr"); const det = el("div");
+    const gaps = (d.gap && d.gap.gaps) || [];
+    for (const g of gaps.slice(0, 5)) det.append(el("div", null, [g.product, g.gap_type, g.ordered != null ? "הוזמן " + g.ordered : null, g.arrived != null ? "הגיע " + g.arrived : null, g.unit].filter(Boolean).join(" · ")));
+    if (d.gap && d.gap.note && !gaps.length) det.append(el("div", "muted", d.gap.note));
+    if (d.field_note) det.append(el("div", "muted", d.field_note));
+    tr.append(td(dd(d.delivery_date), "num"), td(d.supplier), td(d.note_no, "num"), td(SRC[d.source] || d.source), td(linesList(d.items)), td(pill(MATCH, d.match_status)), td(det)); return tr;
+  }));
+}
+function vDeliveries(){
+  const list = [...L.deliveries].sort((a, b) => (parseDay(b.delivery_date) || 0) - (parseDay(a.delivery_date) || 0));
+  return panel("משלוחים", list.length + " תעודות שנקלטו", list.length ? deliveriesTable(list) : el("div", "empty", "עוד אין משלוחים."), "משלוח \"אין הזמנה להשוואה\" אינו חריגה: למשל בטון שהוזמן בטלפון. מיום ראשון ההזמנות עוברות באפליקציה, וההשוואה תכסה אותן.");
+}
+function vSuppliers(){
+  const by = {};
+  for (const o of L.orders) (by[o.supplier || "—"] ||= { o: 0, d: 0, g: 0, last: null }).o++;
+  for (const d of L.deliveries) { const s = (by[d.supplier || "—"] ||= { o: 0, d: 0, g: 0, last: null }); s.d++; if (isGap(d)) s.g++; const t = parseDay(d.delivery_date); if (t && (!s.last || t > s.last)) s.last = t; }
+  const rows = Object.entries(by).sort((a, b) => b[1].d - a[1].d).map(([k, s]) => { const tr = el("tr");
+    tr.append(td(k), td(String(s.o), "num"), td(String(s.d), "num"), td(s.g ? el("span", "pill bad", s.g + " פערים") : el("span", "pill ok", "אין")), td(s.last ? s.last.toLocaleDateString("he-IL") : "—", "num")); return tr; });
+  return panel("ספקים", "הזמנות, משלוחים ופערים לכל ספק", rows.length ? table(["ספק","הזמנות","משלוחים","פערים","משלוח אחרון"], rows) : el("div", "empty", "עוד אין נתונים."));
+}
+function prevDay(d){ const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - 1); return x.toLocaleDateString("en-CA"); }
+function outputRows(){
+  const byDate = Object.fromEntries(CREWS.map(r => [r.report_date, r])); const rows = [];
+  for (const r of CREWS) { const prev = byDate[prevDay(r.report_date)];
+    for (const c of r.crews) { const unit = c.y_unit || c.unit; if (c.done_yesterday == null || unit === "שעות") continue;
+      const p = !c.y_task && prev && prev.crews.find(x => (x.task||"") === (c.task||"") && (x.zone||"") === (c.zone||""));
+      const n = c.y_n || (p && p.n) || c.n; if (!n) continue;
+      rows.push({ day: c.y_date || (prev ? prev.report_date : prevDay(r.report_date)), origin: c.origin, task: c.y_task || c.task, zone: c.y_zone || c.zone, n, qty: c.done_yesterday, unit, per: c.done_yesterday / n }); } }
+  return rows;
+}
+function vOutput(){
+  const rows = outputRows(); const box = el("div"); box.style.display = "grid"; box.style.gap = "20px";
+  const agg = {};
+  for (const x of rows) { const k = (x.task || "—") + "|" + (x.origin || "—") + "|" + x.unit; const a = (agg[k] ||= { task: x.task, origin: x.origin, unit: x.unit, days: 0, qty: 0, pd: 0 }); a.days++; a.qty += x.qty; a.pd += x.n; }
+  const taskAvg = {}; for (const a of Object.values(agg)) { const t = (taskAvg[a.task + "|" + a.unit] ||= { q: 0, pd: 0 }); t.q += a.qty; t.pd += a.pd; }
+  const sumRows = Object.values(agg).sort((a, b) => (a.task || "").localeCompare(b.task || "")).map(a => {
+    const per = a.qty / a.pd, t = taskAvg[a.task + "|" + a.unit], mean = t.q / t.pd, d = Math.round(100 * (per - mean) / mean);
+    const tr = el("tr"); const vs = td(Object.values(agg).filter(x => x.task === a.task && x.unit === a.unit).length < 2 ? "צוות יחיד במשימה" : (d > 0 ? "+" : "") + d + "%", "num");
+    if (Math.abs(d) >= 10) vs.className = "num " + (d > 0 ? "up" : "down");
+    tr.append(td(a.task), td(a.origin), td(String(a.days), "num"), td(String(a.pd), "num"), td(Math.round(a.qty) + " " + a.unit, "num"), td((Math.round(per * 10) / 10) + " " + a.unit, "num"), vs); return tr; });
+  box.append(panel("הספק לפי משימה וצוות", "30 יום אחרונים", sumRows.length ? table(["משימה","צוות","ימים","ימי-אדם","סה\"כ ביצוע","ליום-אדם","מול צוותים אחרים באותה משימה"], sumRows) : el("div", "empty", "עוד אין דיווחי בוקר עם כמויות. אחרי יומיים של דיווח תופיע כאן הטבלה."), "הכמויות הן הערכה של מנהל העבודה, לא מדידה. השוואה בין צוותים תקפה רק לאותה משימה ואותה יחידה."));
+  const dayRows = rows.sort((a, b) => b.day.localeCompare(a.day)).map(x => { const tr = el("tr"); tr.append(td(dd(x.day), "num"), td(x.origin), td([x.task, x.zone].filter(Boolean).join(" · ")), td(String(x.n), "num"), td(x.qty + " " + x.unit, "num"), td((Math.round(x.per * 10) / 10) + " " + x.unit, "num")); return tr; });
+  if (dayRows.length) box.append(panel("לפי יום", null, table(["יום עבודה","צוות","משימה · אזור","אנשים","ביצוע","ליום-אדם"], dayRows)));
+  return box;
+}
+function presenceTable(day){
+  return table(["צוות","משימה","אזור","דווחו","נראו (שיא / ממוצע)","דקות תנועה","שעות בלי תנועה"], day.crews.map(c => { const tr = el("tr");
+    const q = (c.quiet_hours || []).length;
+    tr.append(td(c.origin), td(c.task), td(c.zone || "—"), td(String(c.n ?? "—"), "num"),
+      td(c.status === "measured" ? (c.peak_seen ?? "—") + " / " + (c.avg_seen ?? "—") : el("span", "pill idle", "לא נמדד"), "num"),
+      td(c.status === "measured" ? String(c.motion_min ?? "—") : "—", "num"),
+      td(c.status !== "measured" ? (c.note || "—") : q ? el("span", "pill " + (q >= 3 ? "bad" : "warn"), c.quiet_hours.map(h => String(h).padStart(2,"0") + ":00").join(", ")) : el("span", "pill ok", "אין")));
+    return tr; }));
+}
+function vPresence(){
+  const box = el("div"); box.style.display = "grid"; box.style.gap = "20px";
+  if (!PRES.length) return el("div", "panel empty", "עוד אין הצלבה. היא נוצרת כל בוקר ב-05:45 על יום העבודה הקודם.");
+  for (const d of PRES) box.append(panel(dd(d.work_date), d.source === "app" ? "לפי דיווח באפליקציה" : "לפי הודעת וואטסאפ", presenceTable(d)));
+  box.append(el("p", "sub", "המצלמות מקליטות רק בתנועה ולא מכסות את כל האתר. \"שעות בלי תנועה\" הוא ממצא לבירור מול מנהל העבודה, לא הוכחה."));
+  return box;
+}
+const VIEWS = { overview: ["סקירה", "מה דורש תשומת לב עכשיו", vOverview], orders: ["הזמנות", "מכל הערוצים, עם הסטטוס והמשלוחים שלהן", vOrders], deliveries: ["משלוחים", "כל תעודה מול ההזמנה שלה", vDeliveries], suppliers: ["ספקים", "", vSuppliers], output: ["הספק צוותים", "לפי דיווח הבוקר", vOutput], presence: ["באתר", "דיווח הצוותים מול המצלמות", vPresence] };
+let current = store.get("binat.pv") || "overview";
+function render(){
+  const [t, s, fn] = VIEWS[current] || VIEWS.overview; $("vTitle").textContent = t; $("vSub").textContent = s;
+  for (const b of document.querySelectorAll("aside button")) b.setAttribute("aria-current", String(b.dataset.v === current));
+  const v = $("view"); v.textContent = ""; v.append(fn());
+  const pend = APP_ORDERS.filter(o => o.status === "pending").length, gaps = L.deliveries.filter(isGap).length;
+  $("bPending").hidden = !pend; $("bPending").textContent = pend; $("bGaps").hidden = !gaps; $("bGaps").textContent = gaps;
+  const k = $("kpis"); k.textContent = "";
+  const week = Date.now() - 7 * 864e5;
+  const kp = [[pend, "ממתינות לאישור", pend > 0], [L.orders.filter(o => ["open","partial"].includes(o.status)).length, "הזמנות פתוחות"], [L.deliveries.filter(d => (parseDay(d.delivery_date) || 0) >= week).length, "משלוחים ב-7 ימים"], [gaps, "פערים לבירור", gaps > 0], [PRES[0] ? PRES[0].crews.filter(c => c.status === "measured").length + "/" + PRES[0].crews.length : "—", "צוותים שנמדדו במצלמות"]];
+  for (const [n, l, alert] of kp) { const c = el("div", "kpi" + (alert ? " alert" : "")); c.append(el("b", null, String(n)), el("span", null, l)); k.append(c); }
+}
+for (const b of document.querySelectorAll("aside button")) b.onclick = () => { current = b.dataset.v; store.set("binat.pv", current); render(); };
+async function decide(id, decision, w){
+  for (const b of w.querySelectorAll("button")) b.disabled = true;
+  try { await rpc("decide_order", { p_approve_key: KEY, p_id: id, p_decision: decision, p_by: store.get("binat.name") || "ויקי", p_note: null }); await load(); }
+  catch { for (const b of w.querySelectorAll("button")) b.disabled = false; w.append(el("span", "muted", "לא נשמר")); }
+}
+async function load(){
+  const [ledger, orders, crews, pres, info] = await Promise.all([
+    rpc("platform_ledger", { p_key: KEY }).catch(() => null), rpc("recent_orders", { p_key: KEY }).catch(() => []),
+    rpc("recent_crew_reports", { p_key: KEY, p_days: 30 }).catch(() => []), rpc("recent_presence", { p_key: KEY, p_days: 14 }).catch(() => []),
+    rpc("site_info", { p_key: KEY }).catch(() => [])]);
+  L = ledger || { orders: [], deliveries: [] }; APP_ORDERS = orders; CREWS = crews; PRES = pres;
+  if (info && info[0]) $("siteName").textContent = info[0].name;
+  render();
+}
+(async () => {
+  if (!KEY) { $("gate").hidden = false; return; }
+  let ok = false; try { ok = await rpc("is_approver", { p_key: KEY }); } catch {}
+  if (!ok) { $("gate").hidden = false; return; }
+  $("shell").hidden = false; await load();
+  setInterval(() => { if (document.visibilityState === "visible") load(); }, 120000);
+})();
+</script>
+</body>
+</html>
