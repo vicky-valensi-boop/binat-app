@@ -212,6 +212,13 @@ nav.tabs button[aria-selected="true"]{color:var(--accent);border-top-color:var(-
     <div class="empty" id="outEmpty">עוד אין דיווחים עם כמויות. אחרי שני ימים של דיווח בוקר יופיע כאן הספק לכל צוות.</div>
   </div>
 
+  <!-- ===== APPROVER: boss on site ===== -->
+  <div id="v-presence" class="wrap" hidden>
+    <h2>הבוס באתר</h2>
+    <p class="msg">כל צוות שמנהל העבודה דיווח, מול המצלמות של האזור שלו: כמה אנשים נראו, וכמה שעות עבודה (07:00–16:00) לא הייתה תנועה באזור. המצלמות מקליטות רק בתנועה ולא מכסות את כל האתר, אז זה ממצא לבירור, לא הוכחה.</p>
+    <div class="list" id="pRows"><div class="empty">עוד אין הצלבה. היא נוצרת כל בוקר על אתמול, אחרי שיש דיווח צוותים וצילומי מצלמות.</div></div>
+  </div>
+
   <!-- ===== APPROVER: deliveries ===== -->
   <div id="v-dlist" class="wrap" hidden>
     <h2>משלוחים אחרונים</h2>
@@ -272,7 +279,7 @@ function chipGroup(box, other, onPick, required){
 }
 
 /* ---------- tabs ---------- */
-const VIEWS = { delivery: "משלוח", order: "הזמנה", crews: "צוותים", approve: "לאישור", output: "הספק", dlist: "משלוחים" };
+const VIEWS = { delivery: "משלוח", order: "הזמנה", crews: "צוותים", approve: "לאישור", output: "הספק", presence: "באתר", dlist: "משלוחים" };
 function buildTabs(list){
   const nav = $("tabs"); nav.textContent = ""; nav.hidden = false;
   for (const v of list) {
@@ -284,7 +291,7 @@ function show(v){
   for (const k of Object.keys(VIEWS)) $("v-" + k).hidden = k !== v;
   for (const b of $("tabs").children) b.setAttribute("aria-selected", String(b.dataset.v === v));
   store.set("binat.tab", v);
-  ({ delivery: loadDeliveries, order: loadOrders, crews: loadCrews, approve: loadApprove, output: loadOutput, dlist: loadDeliveries })[v]?.();
+  ({ delivery: loadDeliveries, order: loadOrders, crews: loadCrews, approve: loadApprove, output: loadOutput, presence: loadPresence, dlist: loadDeliveries })[v]?.();
   scrollTo(0, 0);
 }
 
@@ -468,6 +475,30 @@ async function loadOutput(){
   }
 }
 
+/* ---------- presence (approver) ---------- */
+async function loadPresence(){
+  let days; try { days = await rpc("recent_presence", { p_key: KEY, p_days: 14 }); } catch { return; }
+  const box = $("pRows"); if (!days.length) return; box.textContent = "";
+  for (const d of days) {
+    box.append(el("h2", null, new Date(d.work_date + "T12:00:00").toLocaleDateString("he-IL", { weekday: "long", day: "2-digit", month: "2-digit" })));
+    for (const c of d.crews) {
+      const quiet = (c.quiet_hours || []).length;
+      const sev = c.status !== "measured" ? "unknown" : quiet >= 3 ? "damaged" : quiet >= 1 ? "short" : "ok";
+      const card = el("article", "row " + sev); card.style.gridTemplateColumns = "1fr";
+      const top = el("div", "top");
+      top.append(el("b", null, [c.n, c.origin, c.task].filter(Boolean).join(" · ")),
+        el("span", "pill " + (sev === "unknown" ? "idle" : sev), c.status !== "measured" ? "לא נמדד" : quiet ? quiet + " שעות בלי תנועה" : "תנועה כל היום"));
+      const body = el("div"); body.append(top);
+      if (c.status !== "measured") body.append(el("div", "meta", (c.zone || "אזור לא צוין") + " · " + (c.note || "אין נתוני מצלמה")));
+      else {
+        body.append(el("div", "meta", c.zone + " · נראו עד " + (c.peak_seen ?? "—") + " (ממוצע " + (c.avg_seen ?? "—") + ") מתוך " + c.n + " שדווחו" + (c.shared_zone ? " · אזור משותף לכמה צוותים" : "")));
+        if (quiet) body.append(el("div", "meta", "בלי תנועה בשעות: " + c.quiet_hours.map(h => String(h).padStart(2,"0") + ":00").join(", ")));
+      }
+      card.append(body); box.append(card);
+    }
+  }
+}
+
 /* ---------- boot ---------- */
 $("saveName").onclick = () => { const v = $("myname").value.trim(); if (!v) return; store.set("binat.name", v); $("setup").hidden = true; start(); };
 $("changeName").onclick = () => { $("myname").value = me(); $("setup").hidden = false; };
@@ -477,7 +508,7 @@ async function start(){
   try { APPROVER = await rpc("is_approver", { p_key: KEY }); } catch { APPROVER = false; }
   D.sup = chipGroup($("dChips"), $("dOther"), () => {}, false);
   O.sup = chipGroup($("oChips"), $("oOther"), oRefresh, true);
-  const tabs = APPROVER ? ["approve", "output", "dlist"] : ["delivery", "order", "crews"];
+  const tabs = APPROVER ? ["approve", "output", "presence", "dlist"] : ["delivery", "order", "crews"];
   buildTabs(tabs);
   const last = store.get("binat.tab");
   show(tabs.includes(last) ? last : tabs[0]);
