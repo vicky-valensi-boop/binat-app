@@ -7,8 +7,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="קליטה">
-<title>בינת הבנייה · קליטה</title>
+<meta name="apple-mobile-web-app-title" content="בינת">
+<title>בינת הבנייה</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
 /* Layout: one thumb-reach column for the site phone: capture → condition → send, then today's log. Big targets, high contrast for daylight. */
@@ -77,25 +77,45 @@ h2{font-family:var(--display);font-weight:400;font-size:21px;margin:0}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion:no-preference){.btn,.cond{transition:transform .08s}.btn:active,.cond:active{transform:scale(.98)}}
 </style>
+
 <style>
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding-top:max(18px,env(safe-area-inset-top));padding-bottom:max(40px,env(safe-area-inset-bottom))}
+body{margin:0;padding-top:max(14px,env(safe-area-inset-top));padding-bottom:max(90px,calc(env(safe-area-inset-bottom) + 80px))}
 .who{display:flex;gap:8px;align-items:center;font-size:15px;color:var(--muted)}
-.who button{font:inherit;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0}
-input[type=text]{font:inherit;font-size:18px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--ground);color:var(--ink);width:100%}
+.who button,.link{font:inherit;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0}
+input[type=text],input[type=number],input[type=date],select{font:inherit;font-size:17px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--ground);color:var(--ink);width:100%;min-width:0}
+.prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{appearance:none;font:inherit;font-weight:700;font-size:16px;min-height:48px;padding:8px 16px;border-radius:999px;border:2px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
-.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+nav.tabs{position:fixed;inset-inline:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);display:grid;grid-auto-flow:column;grid-auto-columns:1fr;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs button{appearance:none;border:0;background:none;font:inherit;font-weight:700;font-size:15px;color:var(--muted);min-height:62px;cursor:pointer;border-top:3px solid transparent}
+nav.tabs button[aria-selected="true"]{color:var(--accent);border-top-color:var(--accent)}
+.crew{display:grid;grid-template-columns:64px 1fr;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.crew .full{grid-column:1/-1}
+.crew .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.crew .qty{display:grid;grid-template-columns:1fr 110px;gap:8px}
+.crew label{font-size:13px;color:var(--muted);display:grid;gap:3px}
+.crew .rm{justify-self:start}
+.order{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;border-inline-start:5px solid var(--sev)}
+.order.pending{--sev:var(--warn)} .order.approved{--sev:var(--ok)} .order.rejected{--sev:var(--bad)} .order.cancelled{--sev:var(--line)}
+.order pre{margin:0;font:inherit;white-space:pre-wrap}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tbl{overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;font-size:15px;min-width:480px}
+.tbl th,.tbl td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{color:var(--muted);font-weight:600;font-size:13px}
+.tbl td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.up{color:var(--ok);font-weight:700} .down{color:var(--bad);font-weight:700}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>קליטת משלוח</h1>
-    <span class="site" id="siteName">בינת הבנייה</span>
+    <h1 id="title">בינת הבנייה</h1>
+    <span class="site" id="siteName"></span>
   </header>
 
   <section class="card" id="setup" hidden>
@@ -109,42 +129,97 @@ input[type=text]{font:inherit;font-size:18px;border:1px solid var(--line);border
     <p class="msg">פתח את האפליקציה מהקישור ששלח לך ויקי. הוא כולל את קוד האתר.</p>
   </section>
 
-  <div id="main" hidden>
-    <div class="wrap">
-      <div class="who">שולח: <b id="whoName"></b> · <button id="changeName">שנה</button></div>
-      <section class="card" aria-labelledby="s1">
-        <div class="step" id="s1">1 · צלם את תעודת המשלוח</div>
-        <label class="btn primary cam" for="cam">צלם תעודה</label>
-        <input class="sr" type="file" id="cam" accept="image/*" capture="environment" multiple>
-        <div class="thumbs" id="thumbs"></div>
-        <p class="msg">צלם קרוב, שטבלת הפריטים תמלא את התמונה. אפשר כמה תמונות לתעודה אחת.</p>
-      </section>
-      <section class="card" aria-labelledby="sSup">
-        <div class="step" id="sSup">ספק (לא חובה, המערכת מזהה מהתעודה)</div>
-        <div class="chips" id="chips" role="group" aria-label="ספק"></div>
-        <input type="text" id="otherSup" placeholder="שם הספק" hidden>
-      </section>
-      <section class="card" aria-labelledby="s2">
-        <div class="step" id="s2">2 · מה הגיע?</div>
-        <div class="conds" role="group" aria-label="מצב המשלוח">
-          <button class="cond ok" data-c="ok" aria-pressed="false">הכל תקין</button>
-          <button class="cond short" data-c="short" aria-pressed="false">חסר משהו</button>
-          <button class="cond damaged" data-c="damaged" aria-pressed="false">יש נזק</button>
-        </div>
-        <label class="note" id="noteWrap" hidden>מה חסר או שבור? (לא חובה)
-          <textarea id="note" placeholder="למשל: חסרים 2 שקים, משטח אחד שבור"></textarea>
-        </label>
-      </section>
-      <button class="btn primary" id="send" disabled>שלח</button>
-      <div class="prog" id="prog" hidden><i id="bar"></i></div>
-      <p class="msg" id="status" role="status" aria-live="polite"></p>
-      <section aria-labelledby="hist" class="list">
-        <h2 id="hist">משלוחים אחרונים באתר</h2>
-        <div class="list" id="rows"><div class="empty">עוד אין משלוחים. התעודה הראשונה שתצלם תופיע כאן.</div></div>
-      </section>
-    </div>
+  <div class="who" id="whoBar" hidden>משתמש: <b id="whoName"></b> · <button id="changeName">שנה</button></div>
+
+  <!-- ===== FIELD: delivery ===== -->
+  <div id="v-delivery" class="wrap" hidden>
+    <section class="card">
+      <div class="step">1 · צלם את תעודת המשלוח</div>
+      <label class="btn primary cam" for="cam">צלם תעודה</label>
+      <input class="sr" type="file" id="cam" accept="image/*" capture="environment" multiple>
+      <div class="thumbs" id="thumbs"></div>
+      <p class="msg">צלם קרוב, שטבלת הפריטים תמלא את התמונה. אפשר כמה תמונות לתעודה אחת.</p>
+    </section>
+    <section class="card">
+      <div class="step">ספק (לא חובה, המערכת מזהה מהתעודה)</div>
+      <div class="chips" id="dChips" role="group" aria-label="ספק"></div>
+      <input type="text" id="dOther" placeholder="שם הספק" hidden>
+    </section>
+    <section class="card">
+      <div class="step">2 · מה הגיע?</div>
+      <div class="conds" role="group" aria-label="מצב המשלוח">
+        <button class="cond ok" data-c="ok" aria-pressed="false">הכל תקין</button>
+        <button class="cond short" data-c="short" aria-pressed="false">חסר משהו</button>
+        <button class="cond damaged" data-c="damaged" aria-pressed="false">יש נזק</button>
+      </div>
+      <label class="note" id="noteWrap" hidden>מה חסר או שבור? (לא חובה)
+        <textarea id="note" placeholder="למשל: חסרים 2 שקים, משטח אחד שבור"></textarea>
+      </label>
+    </section>
+    <button class="btn primary" id="dSend" disabled>שלח משלוח</button>
+    <div class="prog" id="dProg" hidden><i id="dBar"></i></div>
+    <p class="msg" id="dStatus" role="status" aria-live="polite"></p>
+    <h2>משלוחים אחרונים באתר</h2>
+    <div class="list" id="dRows"><div class="empty">עוד אין משלוחים. התעודה הראשונה שתצלם תופיע כאן.</div></div>
+  </div>
+
+  <!-- ===== FIELD: order ===== -->
+  <div id="v-order" class="wrap" hidden>
+    <section class="card">
+      <div class="step">ממי מזמינים?</div>
+      <div class="chips" id="oChips" role="group" aria-label="ספק"></div>
+      <input type="text" id="oOther" placeholder="שם הספק" hidden>
+    </section>
+    <section class="card">
+      <div class="step">מה להזמין</div>
+      <textarea id="oText" placeholder="שורה לכל פריט, עם כמות. למשל:&#10;דבק 101 — 20 שקים&#10;קצף מקרופקס — 7 קרטונים"></textarea>
+      <label class="btn ghost" for="oCam">או צלם רשימה / הצעה</label>
+      <input class="sr" type="file" id="oCam" accept="image/*" capture="environment" multiple>
+      <div class="thumbs" id="oThumbs"></div>
+      <label class="note">מתי צריך? (לא חובה)<input type="date" id="oDate"></label>
+    </section>
+    <button class="btn primary" id="oSend" disabled>שלח לאישור</button>
+    <p class="msg" id="oStatus" role="status" aria-live="polite"></p>
+    <h2>הזמנות אחרונות</h2>
+    <div class="list" id="oRows"><div class="empty">עוד אין הזמנות. הזמנה שתשלח תופיע כאן עם הסטטוס שלה.</div></div>
+  </div>
+
+  <!-- ===== FIELD: crew report ===== -->
+  <div id="v-crews" class="wrap" hidden>
+    <section class="card">
+      <div class="step">דיווח בוקר · <span id="cDate"></span></div>
+      <p class="msg">הצוותים מאתמול כבר כאן. תעדכן מי באתר היום, ולכל צוות כמה הוא ביצע <b>אתמול</b>.</p>
+    </section>
+    <div class="list" id="crewList"></div>
+    <button class="btn ghost" id="addCrew">+ הוסף צוות</button>
+    <button class="btn primary" id="cSend">שלח דיווח</button>
+    <p class="msg" id="cStatus" role="status" aria-live="polite"></p>
+  </div>
+
+  <!-- ===== APPROVER: pending orders ===== -->
+  <div id="v-approve" class="wrap" hidden>
+    <h2>הזמנות לאישור</h2>
+    <div class="list" id="aRows"><div class="empty">אין הזמנות שמחכות לאישור.</div></div>
+    <h2>החלטות אחרונות</h2>
+    <div class="list" id="aDone"></div>
+  </div>
+
+  <!-- ===== APPROVER: output ===== -->
+  <div id="v-output" class="wrap" hidden>
+    <h2>הספק צוותים</h2>
+    <p class="msg">לפי דיווח הבוקר של מנהל העבודה. הכמויות הן הערכה שלו, לא מדידה. "ליום-אדם" = כמות חלקי מספר האנשים בצוות באותו יום.</p>
+    <div class="tbl"><table><thead><tr><th>יום עבודה</th><th>צוות</th><th>משימה · אזור</th><th>אנשים</th><th>ביצוע</th><th>ליום-אדם</th><th>מול הממוצע</th></tr></thead><tbody id="outBody"></tbody></table></div>
+    <div class="empty" id="outEmpty">עוד אין דיווחים עם כמויות. אחרי שני ימים של דיווח בוקר יופיע כאן הספק לכל צוות.</div>
+  </div>
+
+  <!-- ===== APPROVER: deliveries ===== -->
+  <div id="v-dlist" class="wrap" hidden>
+    <h2>משלוחים אחרונים</h2>
+    <div class="list" id="dlRows"><div class="empty">עוד אין משלוחים.</div></div>
   </div>
 </div>
+
+<nav class="tabs" id="tabs" role="tablist" hidden></nav>
 
 <script>
 const SB_URL = "https://mfzglrkmxyepzgzvyyuc.supabase.co";
@@ -152,11 +227,10 @@ const SB_KEY = "sb_publishable_czhlgvL-hn3f-9efjUySHg_2UxdUdug";
 const $ = (id) => document.getElementById(id);
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 
-// Site key: from #k=... once, then remembered on this phone.
 const hashKey = new URLSearchParams(location.hash.slice(1)).get("k");
 if (hashKey) { store.set("binat.k", hashKey); history.replaceState(null, "", location.pathname); }
 const KEY = hashKey || store.get("binat.k");
-const state = { files: [], cond: null, sending: false, supplier: null };
+let APPROVER = false, SUPPLIERS = [];
 
 function h(extra){ return Object.assign({ apikey: SB_KEY }, extra || {}); }
 async function rpc(fn, body){
@@ -164,103 +238,253 @@ async function rpc(fn, body){
   if (!r.ok) throw new Error(fn + " " + r.status);
   return r.json();
 }
-async function upload(file, i){
+async function upload(file, i, kind){
   const ext = (file.type.split("/")[1] || "jpg").replace("jpeg","jpg");
-  const path = KEY + "/" + new Date().toISOString().slice(0,10) + "/" + Date.now() + "-" + i + "." + ext;
+  const path = KEY + "/" + new Date().toISOString().slice(0,10) + "/" + kind + "-" + Date.now() + "-" + i + "." + ext;
   const r = await fetch(SB_URL + "/storage/v1/object/delivery-notes/" + path, { method: "POST", headers: h({ "Content-Type": file.type || "image/jpeg" }), body: file });
   if (!r.ok) throw new Error("upload " + r.status);
   return path;
 }
-function renderChips(list){
-  const box = $("chips"); box.textContent = "";
-  for (const name of [...list, "אחר"]) {
-    const b = document.createElement("button"); b.className = "chip"; b.type = "button"; b.textContent = name; b.setAttribute("aria-pressed","false");
+function say(el, t, err){ el.textContent = t || ""; el.classList.toggle("err", !!err); }
+const me = () => store.get("binat.name") || "";
+const fmt = (iso) => new Date(iso).toLocaleString("he-IL", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+const todayIL = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function thumbs(box, files){ box.textContent = ""; for (const f of files) { const i = el("img"); i.alt = "תמונה"; i.src = URL.createObjectURL(f); box.append(i); } }
+
+function chipGroup(box, other, onPick, required){
+  box.textContent = "";
+  let picked = null;
+  for (const name of [...SUPPLIERS, "אחר"]) {
+    const b = el("button", "chip", name); b.type = "button"; b.setAttribute("aria-pressed","false");
     b.onclick = () => {
-      const on = b.getAttribute("aria-pressed") !== "true";
+      const on = b.getAttribute("aria-pressed") !== "true" || required;
       for (const o of box.children) o.setAttribute("aria-pressed","false");
-      b.setAttribute("aria-pressed", String(on));
-      state.supplier = on ? (name === "אחר" ? "" : name) : null;
-      $("otherSup").hidden = !(on && name === "אחר");
+      if (on) b.setAttribute("aria-pressed","true");
+      picked = on ? name : null; other.hidden = !(on && name === "אחר"); onPick();
     };
     box.append(b);
   }
+  return {
+    value(){ return picked === "אחר" ? (other.value.trim() || null) : picked; },
+    reset(){ picked = null; other.value = ""; other.hidden = true; for (const o of box.children) o.setAttribute("aria-pressed","false"); }
+  };
 }
-async function loadSite(){
-  try { const r = await rpc("site_info", { p_key: KEY }); if (r && r[0]) { $("siteName").textContent = "בינת הבנייה · " + r[0].name; renderChips(r[0].suppliers || []); } }
-  catch { renderChips([]); }
+
+/* ---------- tabs ---------- */
+const VIEWS = { delivery: "משלוח", order: "הזמנה", crews: "צוותים", approve: "לאישור", output: "הספק", dlist: "משלוחים" };
+function buildTabs(list){
+  const nav = $("tabs"); nav.textContent = ""; nav.hidden = false;
+  for (const v of list) {
+    const b = el("button", null, VIEWS[v]); b.setAttribute("role","tab"); b.dataset.v = v;
+    b.onclick = () => show(v); nav.append(b);
+  }
 }
-function setStatus(t, err){ const s = $("status"); s.textContent = t || ""; s.classList.toggle("err", !!err); }
-function refresh(){ $("send").disabled = !(state.files.length && state.cond) || state.sending; }
-function showName(){ $("whoName").textContent = store.get("binat.name") || ""; }
+function show(v){
+  for (const k of Object.keys(VIEWS)) $("v-" + k).hidden = k !== v;
+  for (const b of $("tabs").children) b.setAttribute("aria-selected", String(b.dataset.v === v));
+  store.set("binat.tab", v);
+  ({ delivery: loadDeliveries, order: loadOrders, crews: loadCrews, approve: loadApprove, output: loadOutput, dlist: loadDeliveries })[v]?.();
+  scrollTo(0, 0);
+}
 
-$("saveName").onclick = () => { const v = $("myname").value.trim(); if (!v) return; store.set("binat.name", v); $("setup").hidden = true; $("main").hidden = false; showName(); };
-$("changeName").onclick = () => { $("myname").value = store.get("binat.name") || ""; $("main").hidden = true; $("setup").hidden = false; };
-
-$("cam").addEventListener("change", (e) => {
-  for (const f of e.target.files) state.files.push(f);
-  e.target.value = "";
-  const box = $("thumbs"); box.textContent = "";
-  for (const f of state.files) { const img = document.createElement("img"); img.alt = "תמונת תעודה"; img.src = URL.createObjectURL(f); box.append(img); }
-  refresh();
-});
-for (const b of document.querySelectorAll(".cond")) b.addEventListener("click", () => {
-  state.cond = b.dataset.c;
-  for (const o of document.querySelectorAll(".cond")) o.setAttribute("aria-pressed", String(o === b));
-  $("noteWrap").hidden = state.cond === "ok"; refresh();
-});
-
-$("send").addEventListener("click", async () => {
-  if (state.sending) return;
-  state.sending = true; refresh(); $("prog").hidden = false;
+/* ---------- delivery ---------- */
+const D = { files: [], cond: null, busy: false, sup: null };
+function dRefresh(){ $("dSend").disabled = !(D.files.length && D.cond) || D.busy; }
+$("cam").addEventListener("change", (e) => { D.files.push(...e.target.files); e.target.value = ""; thumbs($("thumbs"), D.files); dRefresh(); });
+for (const b of document.querySelectorAll(".cond")) b.onclick = () => {
+  D.cond = b.dataset.c; for (const o of document.querySelectorAll(".cond")) o.setAttribute("aria-pressed", String(o === b));
+  $("noteWrap").hidden = D.cond === "ok"; dRefresh();
+};
+$("dSend").onclick = async () => {
+  if (D.busy) return; D.busy = true; dRefresh(); $("dProg").hidden = false;
   try {
     const paths = [];
-    for (let i = 0; i < state.files.length; i++) {
-      setStatus("מעלה תמונה " + (i+1) + " מתוך " + state.files.length + "…");
-      paths.push(await upload(state.files[i], i));
-      $("bar").style.width = Math.round(100 * (i+1) / (state.files.length + 1)) + "%";
-    }
-    await rpc("submit_delivery", { p_key: KEY, p_condition: state.cond, p_note: $("note").value.trim() || null, p_photos: paths, p_by: store.get("binat.name"), p_supplier: state.supplier === "" ? ($("otherSup").value.trim() || null) : state.supplier });
-    $("bar").style.width = "100%";
-    state.files = []; state.cond = null; $("note").value = ""; $("thumbs").textContent = "";
-    for (const o of document.querySelectorAll(".cond")) o.setAttribute("aria-pressed","false");
-    $("noteWrap").hidden = true;
-    setStatus("נשלח ✓ התעודה תיקרא במשרד ותושווה להזמנה.");
-    loadRecent();
-  } catch (e) {
-    setStatus(navigator.onLine === false ? "אין קליטה. נסה שוב כשיש רשת — התמונות עדיין כאן." : "השליחה נכשלה. נסה שוב. אם זה חוזר, עדכן את ויקי.", true);
-  } finally {
-    state.sending = false; refresh(); setTimeout(() => { $("prog").hidden = true; $("bar").style.width = "0"; }, 800);
-  }
-});
-
+    for (let i = 0; i < D.files.length; i++) { say($("dStatus"), "מעלה תמונה " + (i+1) + " מתוך " + D.files.length + "…"); paths.push(await upload(D.files[i], i, "note")); $("dBar").style.width = Math.round(100*(i+1)/(D.files.length+1)) + "%"; }
+    await rpc("submit_delivery", { p_key: KEY, p_condition: D.cond, p_note: $("note").value.trim() || null, p_photos: paths, p_by: me(), p_supplier: D.sup.value() });
+    $("dBar").style.width = "100%";
+    D.files = []; D.cond = null; $("note").value = ""; $("thumbs").textContent = ""; D.sup.reset();
+    for (const o of document.querySelectorAll(".cond")) o.setAttribute("aria-pressed","false"); $("noteWrap").hidden = true;
+    say($("dStatus"), "נשלח ✓ התעודה תיקרא במשרד ותושווה להזמנה."); loadDeliveries();
+  } catch { say($("dStatus"), navigator.onLine === false ? "אין קליטה. נסה שוב כשיש רשת — התמונות עדיין כאן." : "השליחה נכשלה. נסה שוב. אם זה חוזר, עדכן את ויקי.", true); }
+  finally { D.busy = false; dRefresh(); setTimeout(() => { $("dProg").hidden = true; $("dBar").style.width = "0"; }, 800); }
+};
 const COND = { ok: ["הכל תקין","ok"], short: ["חסר","short"], damaged: ["נזק","damaged"] };
-const STAT = { uploaded: "ממתין לקריאה", read: "נקרא", read_failed: "לא נקרא", not_a_note: "לא תעודה", matched: "הותאם" };
-async function loadRecent(){
-  let rows = [];
-  try { rows = await rpc("recent_deliveries", { p_key: KEY }); } catch { return; }
-  const box = $("rows");
-  if (!rows.length) return;
-  box.textContent = "";
-  for (const v of rows) {
-    const [cl, cc] = COND[v.condition] || ["—","unknown"];
-    const row = document.createElement("article"); row.className = "row " + cc; row.style.gridTemplateColumns = "1fr";
-    const top = document.createElement("div"); top.className = "top";
-    const t = document.createElement("b"); t.textContent = v.supplier || "ספק — ייקרא בקרוב";
-    const ps = document.createElement("span");
-    const p1 = document.createElement("span"); p1.className = "pill " + cc; p1.textContent = cl;
-    const p2 = document.createElement("span"); p2.className = "pill idle"; p2.textContent = STAT[v.status] || v.status;
-    ps.append(p1, " ", p2); top.append(t, ps);
-    const meta = document.createElement("div"); meta.className = "meta";
-    const when = new Date(v.created_at).toLocaleString("he-IL", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
-    meta.textContent = [v.note_no ? "תעודה " + v.note_no : null, when, v.submitted_by].filter(Boolean).join(" · ");
-    const body = document.createElement("div"); body.append(top, meta); row.append(body); box.append(row);
+const DSTAT = { uploaded: "ממתין לקריאה", read: "נקרא", read_failed: "לא נקרא", not_a_note: "לא תעודה", matched: "הותאם" };
+async function loadDeliveries(){
+  let rows; try { rows = await rpc("recent_deliveries", { p_key: KEY }); } catch { return; }
+  for (const box of [$("dRows"), $("dlRows")]) {
+    if (!rows.length) continue; box.textContent = "";
+    for (const v of rows) {
+      const [cl, cc] = COND[v.condition] || ["—","unknown"];
+      const row = el("article", "row " + cc); row.style.gridTemplateColumns = "1fr";
+      const top = el("div", "top"); const ps = el("span");
+      ps.append(el("span", "pill " + cc, cl), " ", el("span", "pill idle", DSTAT[v.status] || v.status));
+      top.append(el("b", null, v.supplier || "ספק — ייקרא בקרוב"), ps);
+      const meta = el("div", "meta", [v.note_no ? "תעודה " + v.note_no : null, fmt(v.created_at), v.submitted_by].filter(Boolean).join(" · "));
+      const body = el("div"); body.append(top, meta); row.append(body); box.append(row);
+    }
   }
 }
 
-if (!KEY) { $("nokey").hidden = false; }
-else if (!store.get("binat.name")) { $("setup").hidden = false; }
-else { $("main").hidden = false; showName(); }
-if (KEY) { loadSite(); loadRecent(); }
+/* ---------- order ---------- */
+const O = { files: [], busy: false, sup: null };
+function oRefresh(){ $("oSend").disabled = O.busy || !O.sup?.value() || !($("oText").value.trim() || O.files.length); }
+$("oText").addEventListener("input", oRefresh); $("oOther").addEventListener("input", oRefresh);
+$("oCam").addEventListener("change", (e) => { O.files.push(...e.target.files); e.target.value = ""; thumbs($("oThumbs"), O.files); oRefresh(); });
+$("oSend").onclick = async () => {
+  if (O.busy) return; O.busy = true; oRefresh();
+  try {
+    const paths = []; for (let i = 0; i < O.files.length; i++) { say($("oStatus"), "מעלה תמונה " + (i+1) + "…"); paths.push(await upload(O.files[i], i, "order")); }
+    await rpc("submit_order", { p_key: KEY, p_by: me(), p_supplier: O.sup.value(), p_text: $("oText").value.trim() || null, p_photos: paths, p_needed_by: $("oDate").value || null });
+    O.files = []; $("oThumbs").textContent = ""; $("oText").value = ""; $("oDate").value = ""; O.sup.reset();
+    say($("oStatus"), "נשלח לאישור ✓ ויקי יקבל הודעה."); loadOrders();
+  } catch { say($("oStatus"), "השליחה נכשלה. נסה שוב.", true); }
+  finally { O.busy = false; oRefresh(); }
+};
+const OSTAT = { pending: ["ממתין לאישור","pending","short"], approved: ["אושר","approved","ok"], rejected: ["נדחה","rejected","damaged"], cancelled: ["בוטל","cancelled","idle"] };
+function orderCard(o, withActions){
+  const [lbl, cls, pill] = OSTAT[o.status] || [o.status, "", "idle"];
+  const c = el("article", "order " + cls);
+  const top = el("div", "top"); top.append(el("b", null, o.supplier || "ספק לא צוין"), el("span", "pill " + pill, lbl));
+  c.append(top);
+  if (o.request_text) c.append(el("pre", null, o.request_text));
+  const meta = [o.requested_by, fmt(o.created_at), o.photo_count ? o.photo_count + " תמונות" : null, o.needed_by ? "נדרש עד " + new Date(o.needed_by).toLocaleDateString("he-IL") : null].filter(Boolean).join(" · ");
+  c.append(el("div", "meta", meta));
+  if (o.status !== "pending" && o.decided_by) c.append(el("div", "meta", lbl + " ע\"י " + o.decided_by + (o.decision_note ? " · " + o.decision_note : "")));
+  if (withActions) {
+    const two = el("div", "two");
+    const ok = el("button", "btn primary", "אשר"); const no = el("button", "btn ghost", "דחה");
+    ok.onclick = () => decide(o.id, "approved", c); no.onclick = () => decide(o.id, "rejected", c);
+    two.append(ok, no); c.append(two);
+  }
+  return c;
+}
+async function loadOrders(){
+  let rows; try { rows = await rpc("recent_orders", { p_key: KEY }); } catch { return; }
+  if (!rows.length) return; const box = $("oRows"); box.textContent = "";
+  for (const o of rows) box.append(orderCard(o, false));
+}
+async function loadApprove(){
+  let rows; try { rows = await rpc("recent_orders", { p_key: KEY }); } catch { return; }
+  const pend = rows.filter(o => o.status === "pending"), done = rows.filter(o => o.status !== "pending").slice(0, 10);
+  const a = $("aRows"); a.textContent = "";
+  if (!pend.length) a.append(el("div", "empty", "אין הזמנות שמחכות לאישור."));
+  for (const o of pend) a.append(orderCard(o, true));
+  const d = $("aDone"); d.textContent = ""; for (const o of done) d.append(orderCard(o, false));
+  const t = [...$("tabs").children].find(b => b.dataset.v === "approve"); if (t) t.textContent = "לאישור" + (pend.length ? " (" + pend.length + ")" : "");
+}
+async function decide(id, decision, card){
+  for (const b of card.querySelectorAll("button")) b.disabled = true;
+  try {
+    const r = await rpc("decide_order", { p_approve_key: KEY, p_id: id, p_decision: decision, p_by: me(), p_note: null });
+    if (r === "not_pending") card.append(el("div", "meta", "ההזמנה כבר טופלה."));
+    loadApprove();
+  } catch { for (const b of card.querySelectorAll("button")) b.disabled = false; card.append(el("div", "msg err", "לא נשמר. נסה שוב.")); }
+}
+
+/* ---------- crews ---------- */
+const UNITS = ["מ\"ר","מ\"ק","טון","יח'","מטר","שעות"];
+let CREWS = [];
+function crewRow(c, idx){
+  const box = el("div", "crew");
+  const n = el("input"); n.type = "number"; n.min = "0"; n.inputMode = "numeric"; n.value = c.n ?? ""; n.setAttribute("aria-label","מספר אנשים");
+  n.oninput = () => c.n = n.value === "" ? null : Number(n.value);
+  const nl = el("label", null, "אנשים"); nl.append(n);
+  const names = el("div", "row2");
+  const o = el("input"); o.type = "text"; o.value = c.origin || ""; o.placeholder = "סרילנקה / תאילנד / קבלן"; o.oninput = () => c.origin = o.value.trim();
+  const ol = el("label", null, "מי"); ol.append(o);
+  const z = el("input"); z.type = "text"; z.value = c.zone || ""; z.placeholder = "קומה 2 / מרתף"; z.oninput = () => c.zone = z.value.trim();
+  const zl = el("label", null, "איפה"); zl.append(z);
+  names.append(ol, zl);
+  const t = el("input"); t.type = "text"; t.value = c.task || ""; t.placeholder = "טיח / פירוק טפסנות / ברזל"; t.oninput = () => c.task = t.value.trim();
+  const tl = el("label", "full", "מה עושים היום"); tl.append(t);
+  const q = el("div", "qty full");
+  const qi = el("input"); qi.type = "number"; qi.min = "0"; qi.step = "any"; qi.inputMode = "decimal"; qi.value = c.done_yesterday ?? ""; qi.placeholder = "כמות";
+  qi.oninput = () => c.done_yesterday = qi.value === "" ? null : Number(qi.value);
+  const us = el("select"); for (const u of UNITS) { const op = el("option", null, u); op.value = u; us.append(op); } us.value = c.unit || "מ\"ר"; us.onchange = () => c.unit = us.value;
+  if (!c.unit) c.unit = us.value;
+  const ql = el("label", null, "כמה ביצעו אתמול"); ql.append(qi); const ul = el("label", null, "יחידה"); ul.append(us);
+  q.append(ql, ul);
+  const rm = el("button", "link rm full", "הסר צוות"); rm.type = "button"; rm.onclick = () => { CREWS.splice(idx, 1); renderCrews(); };
+  box.append(nl, names, tl, q, rm);
+  return box;
+}
+function renderCrews(){ const l = $("crewList"); l.textContent = ""; CREWS.forEach((c, i) => l.append(crewRow(c, i))); }
+async function loadCrews(){
+  $("cDate").textContent = new Date().toLocaleDateString("he-IL", { weekday: "long", day: "2-digit", month: "2-digit" });
+  if (CREWS.length) return;
+  try {
+    const reps = await rpc("recent_crew_reports", { p_key: KEY, p_days: 14 });
+    const today = reps.find(r => r.report_date === todayIL());
+    const base = today || reps[0];
+    CREWS = base ? base.crews.map(c => ({ ...c, done_yesterday: today ? c.done_yesterday : null })) : [];
+  } catch {}
+  if (!CREWS.length) CREWS = [{ n: null, origin: "", task: "", zone: "", unit: "מ\"ר", done_yesterday: null }];
+  renderCrews();
+}
+$("addCrew").onclick = () => { CREWS.push({ n: null, origin: "", task: "", zone: "", unit: "מ\"ר", done_yesterday: null }); renderCrews(); };
+$("cSend").onclick = async () => {
+  const crews = CREWS.filter(c => (c.n ?? 0) > 0 || c.task);
+  if (!crews.length) { say($("cStatus"), "אין צוותים לשלוח.", true); return; }
+  $("cSend").disabled = true;
+  try { await rpc("submit_crew_report", { p_key: KEY, p_by: me(), p_date: todayIL(), p_crews: crews }); say($("cStatus"), "הדיווח נשלח ✓ אפשר לעדכן ולשלוח שוב היום."); }
+  catch { say($("cStatus"), "השליחה נכשלה. נסה שוב.", true); }
+  finally { $("cSend").disabled = false; }
+};
+
+/* ---------- output (approver) ---------- */
+function prevDay(d){ const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - 1); return x.toLocaleDateString("en-CA"); }
+async function loadOutput(){
+  let reps; try { reps = await rpc("recent_crew_reports", { p_key: KEY, p_days: 30 }); } catch { return; }
+  const byDate = Object.fromEntries(reps.map(r => [r.report_date, r]));
+  const rows = [];
+  for (const r of reps) {
+    const prev = byDate[prevDay(r.report_date)];
+    for (const c of r.crews) {
+      if (c.done_yesterday == null || c.unit === "שעות") continue;
+      // headcount that did yesterday's work: same task+zone in yesterday's report, else today's count
+      const p = prev && prev.crews.find(x => (x.task || "") === (c.task || "") && (x.zone || "") === (c.zone || ""));
+      const n = (p && p.n) || c.n;
+      if (!n) continue;
+      rows.push({ day: prev ? prev.report_date : prevDay(r.report_date), origin: c.origin, task: c.task, zone: c.zone, n, qty: c.done_yesterday, unit: c.unit, per: c.done_yesterday / n });
+    }
+  }
+  const avg = {};
+  for (const x of rows) { const k = (x.task || "") + "|" + x.unit; (avg[k] ||= []).push(x.per); }
+  const body = $("outBody"); body.textContent = "";
+  $("outEmpty").hidden = rows.length > 0;
+  rows.sort((a, b) => b.day.localeCompare(a.day));
+  for (const x of rows) {
+    const k = (x.task || "") + "|" + x.unit, list = avg[k], mean = list.reduce((s, v) => s + v, 0) / list.length;
+    const tr = el("tr");
+    tr.append(el("td", null, new Date(x.day + "T12:00:00").toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit" })),
+      el("td", null, x.origin || "—"), el("td", null, [x.task, x.zone].filter(Boolean).join(" · ") || "—"),
+      el("td", "num", String(x.n)), el("td", "num", x.qty + " " + x.unit), el("td", "num", (Math.round(x.per * 10) / 10) + " " + x.unit));
+    const vs = el("td", "num");
+    if (list.length < 2) vs.textContent = "עוד אין ממוצע";
+    else { const d = Math.round(100 * (x.per - mean) / mean); vs.textContent = (d > 0 ? "+" : "") + d + "%"; vs.className = "num " + (d >= 10 ? "up" : d <= -10 ? "down" : ""); }
+    tr.append(vs); body.append(tr);
+  }
+}
+
+/* ---------- boot ---------- */
+$("saveName").onclick = () => { const v = $("myname").value.trim(); if (!v) return; store.set("binat.name", v); $("setup").hidden = true; start(); };
+$("changeName").onclick = () => { $("myname").value = me(); $("setup").hidden = false; };
+async function start(){
+  $("whoBar").hidden = false; $("whoName").textContent = me();
+  try { const r = await rpc("site_info", { p_key: KEY }); if (r && r[0]) { $("siteName").textContent = r[0].name; SUPPLIERS = r[0].suppliers || []; } } catch {}
+  try { APPROVER = await rpc("is_approver", { p_key: KEY }); } catch { APPROVER = false; }
+  D.sup = chipGroup($("dChips"), $("dOther"), () => {}, false);
+  O.sup = chipGroup($("oChips"), $("oOther"), oRefresh, true);
+  const tabs = APPROVER ? ["approve", "output", "dlist"] : ["delivery", "order", "crews"];
+  buildTabs(tabs);
+  const last = store.get("binat.tab");
+  show(tabs.includes(last) ? last : tabs[0]);
+}
+if (!KEY) $("nokey").hidden = false;
+else if (!me()) $("setup").hidden = false;
+else start();
 </script>
 </body>
 </html>
