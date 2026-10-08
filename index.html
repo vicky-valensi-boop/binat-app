@@ -83,6 +83,10 @@ body{margin:0;padding-top:max(18px,env(safe-area-inset-top));padding-bottom:max(
 .who{display:flex;gap:8px;align-items:center;font-size:15px;color:var(--muted)}
 .who button{font:inherit;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0}
 input[type=text]{font:inherit;font-size:18px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--ground);color:var(--ink);width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;font:inherit;font-weight:700;font-size:16px;min-height:48px;padding:8px 16px;border-radius:999px;border:2px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
 .prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 </style>
@@ -114,6 +118,11 @@ input[type=text]{font:inherit;font-size:18px;border:1px solid var(--line);border
         <input class="sr" type="file" id="cam" accept="image/*" capture="environment" multiple>
         <div class="thumbs" id="thumbs"></div>
         <p class="msg">צלם קרוב, שטבלת הפריטים תמלא את התמונה. אפשר כמה תמונות לתעודה אחת.</p>
+      </section>
+      <section class="card" aria-labelledby="sSup">
+        <div class="step" id="sSup">ספק (לא חובה, המערכת מזהה מהתעודה)</div>
+        <div class="chips" id="chips" role="group" aria-label="ספק"></div>
+        <input type="text" id="otherSup" placeholder="שם הספק" hidden>
       </section>
       <section class="card" aria-labelledby="s2">
         <div class="step" id="s2">2 · מה הגיע?</div>
@@ -147,7 +156,7 @@ const store = { get(k){ try { return localStorage.getItem(k); } catch { return n
 const hashKey = new URLSearchParams(location.hash.slice(1)).get("k");
 if (hashKey) { store.set("binat.k", hashKey); history.replaceState(null, "", location.pathname); }
 const KEY = hashKey || store.get("binat.k");
-const state = { files: [], cond: null, sending: false };
+const state = { files: [], cond: null, sending: false, supplier: null };
 
 function h(extra){ return Object.assign({ apikey: SB_KEY }, extra || {}); }
 async function rpc(fn, body){
@@ -161,6 +170,24 @@ async function upload(file, i){
   const r = await fetch(SB_URL + "/storage/v1/object/delivery-notes/" + path, { method: "POST", headers: h({ "Content-Type": file.type || "image/jpeg" }), body: file });
   if (!r.ok) throw new Error("upload " + r.status);
   return path;
+}
+function renderChips(list){
+  const box = $("chips"); box.textContent = "";
+  for (const name of [...list, "אחר"]) {
+    const b = document.createElement("button"); b.className = "chip"; b.type = "button"; b.textContent = name; b.setAttribute("aria-pressed","false");
+    b.onclick = () => {
+      const on = b.getAttribute("aria-pressed") !== "true";
+      for (const o of box.children) o.setAttribute("aria-pressed","false");
+      b.setAttribute("aria-pressed", String(on));
+      state.supplier = on ? (name === "אחר" ? "" : name) : null;
+      $("otherSup").hidden = !(on && name === "אחר");
+    };
+    box.append(b);
+  }
+}
+async function loadSite(){
+  try { const r = await rpc("site_info", { p_key: KEY }); if (r && r[0]) { $("siteName").textContent = "בינת הבנייה · " + r[0].name; renderChips(r[0].suppliers || []); } }
+  catch { renderChips([]); }
 }
 function setStatus(t, err){ const s = $("status"); s.textContent = t || ""; s.classList.toggle("err", !!err); }
 function refresh(){ $("send").disabled = !(state.files.length && state.cond) || state.sending; }
@@ -192,7 +219,7 @@ $("send").addEventListener("click", async () => {
       paths.push(await upload(state.files[i], i));
       $("bar").style.width = Math.round(100 * (i+1) / (state.files.length + 1)) + "%";
     }
-    await rpc("submit_delivery", { p_key: KEY, p_condition: state.cond, p_note: $("note").value.trim() || null, p_photos: paths, p_by: store.get("binat.name") });
+    await rpc("submit_delivery", { p_key: KEY, p_condition: state.cond, p_note: $("note").value.trim() || null, p_photos: paths, p_by: store.get("binat.name"), p_supplier: state.supplier === "" ? ($("otherSup").value.trim() || null) : state.supplier });
     $("bar").style.width = "100%";
     state.files = []; state.cond = null; $("note").value = ""; $("thumbs").textContent = "";
     for (const o of document.querySelectorAll(".cond")) o.setAttribute("aria-pressed","false");
@@ -233,7 +260,7 @@ async function loadRecent(){
 if (!KEY) { $("nokey").hidden = false; }
 else if (!store.get("binat.name")) { $("setup").hidden = false; }
 else { $("main").hidden = false; showName(); }
-if (KEY) loadRecent();
+if (KEY) { loadSite(); loadRecent(); }
 </script>
 </body>
 </html>
