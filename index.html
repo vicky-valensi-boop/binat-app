@@ -125,8 +125,11 @@ nav.tabs button[aria-selected="true"]{color:var(--accent);border-top-color:var(-
   </section>
 
   <section class="card" id="nokey" hidden>
-    <div class="step">הקישור לא מלא</div>
-    <p class="msg">פתח את האפליקציה מהקישור ששלח לך ויקי. הוא כולל את קוד האתר.</p>
+    <div class="step">הצטרפות לאתר</div>
+    <p class="msg">הקלד את קוד האתר שקיבלת ממנהל העבודה (8 תווים).</p>
+    <input type="text" id="joinCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="למשל: K7M2-XQ9P" dir="ltr">
+    <button class="btn primary" id="joinBtn">הצטרף</button>
+    <p class="msg" id="joinStatus"></p>
   </section>
 
   <div class="who" id="whoBar" hidden>משתמש: <b id="whoName"></b> · <button id="changeName">שנה</button></div>
@@ -392,7 +395,7 @@ async function decide(id, decision, card){
 
 /* ---------- crews ---------- */
 const UNITS = ["מ\"ר","מ\"ק","טון","יח'","מטר","שעות"];
-let CREWS = [], ZONES = [], TASKS = [];
+let CREWS = [], ZONES = [], TASKS = [], CREWNAMES = [];
 const unitFor = (task) => (TASKS.find(t => t.name === task) || {}).unit || null;
 function pickRow(label, options, value, onPick){
   const wrap = el("div", "full"); wrap.append(el("div", "meta", label));
@@ -433,9 +436,8 @@ function crewRow(c, idx){
   }
   box.append(el("div", "full step", "היום"));
   const nl = el("label", null, "אנשים"); nl.append(numInput(c.n, v => c.n = v, false));
-  const o = el("input"); o.type = "text"; o.value = c.origin || ""; o.placeholder = "סרילנקה / תאילנד / שם קבלן"; o.oninput = () => c.origin = o.value.trim();
-  const ol = el("label", null, "מי (צוות / קבלן)"); ol.append(o);
-  box.append(nl, ol);
+  box.append(nl);
+  box.append(pickRow("מי (צוות / קבלן)", CREWNAMES, c.origin, v => c.origin = v));
   box.append(pickRow("איפה", ZONES, c.zone, v => c.zone = v));
   box.append(pickRow("מה עושים", TASKS.map(t => t.name), c.task, v => { c.task = v; c.unit = unitFor(v) || c.unit; }));
   const rm = el("button", "link rm full", "הסר צוות"); rm.type = "button"; rm.onclick = () => { CREWS.splice(idx, 1); renderCrews(); };
@@ -532,7 +534,7 @@ $("saveName").onclick = () => { const v = $("myname").value.trim(); if (!v) retu
 $("changeName").onclick = () => { $("myname").value = me(); $("setup").hidden = false; };
 async function start(){
   $("whoBar").hidden = false; $("whoName").textContent = me();
-  try { const r = await rpc("site_info", { p_key: KEY }); if (r && r[0]) { $("siteName").textContent = r[0].name; SUPPLIERS = r[0].suppliers || []; ZONES = r[0].zones || []; TASKS = r[0].tasks || []; } } catch {}
+  try { const r = await rpc("site_info", { p_key: KEY }); if (r && r[0]) { $("siteName").textContent = r[0].name; SUPPLIERS = r[0].suppliers || []; ZONES = r[0].zones || []; TASKS = r[0].tasks || []; CREWNAMES = r[0].crews || []; } } catch {}
   try { APPROVER = await rpc("is_approver", { p_key: KEY }); } catch { APPROVER = false; }
   D.sup = chipGroup($("dChips"), $("dOther"), () => {}, false);
   O.sup = chipGroup($("oChips"), $("oOther"), oRefresh, true);
@@ -541,6 +543,17 @@ async function start(){
   const last = store.get("binat.tab");
   show(tabs.includes(last) ? last : tabs[0]);
 }
+$("joinBtn").onclick = async () => {
+  const code = $("joinCode").value.trim();
+  if (!code) return;
+  say($("joinStatus"), "בודק…");
+  try {
+    const r = await rpc("join_site", { p_code: code });
+    if (!r.length) return say($("joinStatus"), "הקוד לא נמצא. בדוק ונסה שוב.", true);
+    store.set("binat.k", r[0].site_key);
+    location.reload();
+  } catch { say($("joinStatus"), "אין חיבור. נסה שוב בעוד רגע.", true); }
+};
 if (!KEY) $("nokey").hidden = false;
 else if (!me()) $("setup").hidden = false;
 else start();
